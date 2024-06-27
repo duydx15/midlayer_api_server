@@ -1,0 +1,8 @@
+logs/
+node_modules/
+with_dep/
+src/lib/*.js
+.env
+*note.txt
+listing_purchasing/
+src/lib/list_operator.json

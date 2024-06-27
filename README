@@ -1,0 +1,81 @@
+) For Developer
+  1. Pull source code to Dev Computer
+  2. Run "npm install" -> Intall all require package
+  3. Install Redis server:
+      - curl -fsSL https://packages.redis.io/gpg | sudo gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
+      - echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/redis.list
+      - sudo apt-get update
+      - sudo apt-get install redis
+  4. Edit config in "src/config"
+  3. Run "redis-server /etc/redis/myconfig.conf && npm run serve"
+
+*) For Production
+  I) Setup Environment
+    1. Setup SQL server
+      - Follow link: https://www.sqlshack.com/how-to-install-sql-server-express-edition/
+      - Login and create database
+      - Open Sql Server Configuration Manager
+        + SQL Server Network Configuration =>TCP/IP => Properties => Find IPAll => TCP Port. Enter port number
+        + SQL Server Services => Start SQL Server Browser service
+
+    2. Enable IIS
+      - Follow link: https://enterprise.arcgis.com/en/web-adaptor/latest/install/iis/enable-iis-2016-components-server.htm
+      - Install files in "/Environment/iis"
+        + ARRv3_0.exe
+        + urlrewrite2.exe
+
+    3. Setup NodeJS:
+      - Download in local: https://nodejs.org/dist/v14.17.1/node-v14.17.1-x64.msi
+      - Push to production and install
+
+      a. Offline
+        - Open System Environment => User variables => Add full path of "/Environment/npm" folder to Path variable
+        - Change default global: https://stackoverflow.com/questions/19874582/change-default-global-installation-directory-for-node-js-modules-in-windows/26894197#26894197
+        - Create "/pm2" folder
+        - Open System Environment => System variables => create key "PM2_HOME", value is full path of "/pm2"
+        - Open cmd, test with command "pm2 list"
+
+      b. Online
+        - Run "npm install -g pm2"
+
+  II) Build DBServer and WebServer
+    1  Run "npm run build" on Developer Computer
+    2. Edit ".env"
+    3. Create "Release" folder and copy files to "/Release":
+      - dist/api.bundle.js
+      - package.json
+      - .env
+    4. Go to "/Release" and run "npm install --production"
+    5. Push "/Release" to Production server
+
+  III) Run DBServer
+    a. Start process
+      1. Enter production server
+      2. Open PowerShell, go to "/Release" of DBServer
+      3. Run command: pm2 start api.bundle.js --name "DBServer"
+      4. Save process: pm2 save
+
+    b. Open port
+      1. Open Firewall => Advanced settings => Inbound Rules => New Rule
+      2. In "Rule Type", select "Port" => Next
+      3. Specific local ports => enter DBServer's port => Next
+      4. Name => Enter name (ex: DBServer public) => Finish
+
+  IV) Run WebServer
+    a. Start process
+      1. Enter production server
+      2. Open PowerShell, go to "/Release" of WebServer
+      3. Run command: pm2 start api.bundle.js --name "WebServer"
+      4. Save process: pm2 save
+
+    b. Config IIS
+      1. Open IIS Manager => Sites => Default Web Site (or create new) => URL Rewrite
+      2. Add Rules => Inbound and Outbound Rules => Reverse Proxy
+      3. Inbound Rules => Enter Webserver address (ex: localhost:5000)
+      4. Open port 80 on Firewall
+      5. Then, webserver address is http://localhost
+
+  V) Startup server
+    1. Create a file pm2-resurrect.sh in C:\, which contains the single line pm2 resurrect.
+    2. In Task Scheduler, add a new task that is run on boot, and select that it is run whether the user is logged in or not. You need to type the user password at this point which is saved for successive runs.
+    3. Set the task command to execute the file C:\pm2-resurrect.sh.
